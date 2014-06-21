@@ -27,8 +27,10 @@ features <- read.table("features.txt")
 xcolheaders <- as.character(features[,2])
 
 # tidy up the column headers to be used
-xcolheaders <- gsub("-mean\\(\\)", " Mean", xcolheaders)
-xcolheaders <- gsub("-std\\(\\)", " StDv", xcolheaders)
+# Remove the (), replace hyphens with underscores, format the type (Mean or StDv)
+xcolheaders <- gsub("-mean\\(\\)", "_Mean", xcolheaders)
+xcolheaders <- gsub("-std\\(\\)", "_StDv", xcolheaders)
+xcolheaders <- gsub("-", "_", xcolheaders)
 
 ########################################################################################################
 # Load the test and train data 
@@ -69,17 +71,18 @@ names(all) <- c("ActivityLabel", "Subject", xcolheaders)
 
 colnames <- names(all)
 collabel <- colnames[1:2] # save ActivityLabel, Subject
-colmeans <- grep(" Mean", colnames, value = TRUE) # all Mean columns
-colstdev <- grep(" StDv", colnames, value = TRUE) # all Standard Deviation columns
+colmeans <- grep("_Mean", colnames, value = TRUE) # all Mean columns
+colstdev <- grep("_StDv", colnames, value = TRUE) # all Standard Deviation columns
 keepcolnames <- c(collabel, colmeans, colstdev) # create list of columns to keep
 all <- all[ , keepcolnames] # subset based on columns to keep
 all <- merge(activitylabels, all)   # Add a column for Activity Description
 
 ########################################################################################################
-# Get the means by Activity, Subject
+# Get the means by Activity, Subject; update the column names and add a the activity description
 ########################################################################################################
 
 allsummary <- aggregate(all[c(colmeans, colstdev)], by = list(all$Subject, all$ActivityLabel), mean)
+names(allsummary) <- paste(names(allsummary), "_average", sep="") # add "average" to column names
 colnames(allsummary)[1:2] <- c("Subject", "ActivityLabel") # restore the col names for the grouped columns
 allsummary <- merge(activitylabels, allsummary)   # Add a column for Activity Description
 
@@ -96,4 +99,3 @@ write.table(allsummary, "tidydata.txt", row.names = FALSE )
 ########################################################################################################
 # End
 ########################################################################################################
-
