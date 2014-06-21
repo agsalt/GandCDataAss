@@ -68,11 +68,11 @@ names(all) <- c("ActivityLabel", "Subject", xcolheaders)
 ########################################################################################################
 
 colnames <- names(all)
-collabel <- colnames[1:3] # ActivityLabel, ActivityDescription, Subject
+collabel <- colnames[1:2] # save ActivityLabel, Subject
 colmeans <- grep(" Mean", colnames, value = TRUE) # all Mean columns
 colstdev <- grep(" StDv", colnames, value = TRUE) # all Standard Deviation columns
-keepcolnames <- c(collabel, colmeans, colstdev)
-all <- all[ , keepcolnames]
+keepcolnames <- c(collabel, colmeans, colstdev) # create list of columns to keep
+all <- all[ , keepcolnames] # subset based on columns to keep
 all <- merge(activitylabels, all)   # Add a column for Activity Description
 
 ########################################################################################################
