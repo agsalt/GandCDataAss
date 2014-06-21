@@ -137,6 +137,10 @@ hr {
 
 
 
+<!-- MathJax scripts -->
+<script type="text/javascript" src="https://c328740.ssl.cf1.rackcdn.com/mathjax/2.0-latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
 
 
 </head>
@@ -168,27 +172,123 @@ hr {
 
 <p>As part of this step I also tidy the column names by removing and replacing characters (&ldquo;()&rdquo; removed, hyphens replaced with underscores, mean to Mean and std to StDv)</p>
 
+<pre><code>library(plyr)
+projectdir &lt;- &quot;F:/DATA/MOO/DataCleaning/Ass/&quot;
+setwd(projectdir)
+
+########################################################################################################
+# Obtain Labels and corresponding Descriptions
+########################################################################################################
+
+# change to the unzipped data directory
+setwd(&quot;./data/UCI HAR Dataset&quot;)
+
+# load the activity labels and descriptions
+activitylabels &lt;- read.table(&quot;activity_labels.txt&quot;)
+names(activitylabels) &lt;- c(&quot;ActivityLabel&quot;,&quot;ActivityDescription&quot;)
+
+# load the feature descriptions to be used as column headers
+features &lt;- read.table(&quot;features.txt&quot;)
+xcolheaders &lt;- as.character(features[,2])
+
+# tidy up the column headers to be used
+# Remove the (), replace hyphens with underscores, format the type (Mean or StDv)
+xcolheaders &lt;- gsub(&quot;-mean\\(\\)&quot;, &quot;_Mean&quot;, xcolheaders)
+xcolheaders &lt;- gsub(&quot;-std\\(\\)&quot;, &quot;_StDv&quot;, xcolheaders)
+xcolheaders &lt;- gsub(&quot;-&quot;, &quot;_&quot;, xcolheaders)
+
+</code></pre>
+
 <h2>Step 1 - Merge</h2>
 
 <p>The 3 test and 3 train files were read to tables and the rows combined for each of the 3 pairs.</p>
 
 <p>The three resultant tables were then combined with descriptive rows preceding variable rows.</p>
 
+<pre><code>########################################################################################################
+# Load the test and train data 
+########################################################################################################
+
+subjecttest &lt;- read.table(&quot;./test/subject_test.txt&quot;)
+xtest &lt;- read.table(&quot;./test/X_test.txt&quot;)
+ytest &lt;- read.table(&quot;./test/y_test.txt&quot;)
+
+subjecttrain &lt;- read.table(&quot;./train/subject_train.txt&quot;)
+xtrain &lt;- read.table(&quot;./train/X_train.txt&quot;)
+ytrain &lt;- read.table(&quot;./train/y_train.txt&quot;)
+
+########################################################################################################
+# Combine the rows for the 3 sets each of test and train tables
+########################################################################################################
+
+subject &lt;- rbind(subjecttest,subjecttrain)
+x &lt;- rbind(xtest, xtrain)
+y &lt;- rbind(ytest, ytrain)
+
+########################################################################################################
+# Combine the columns of the 3 tables
+########################################################################################################
+
+all &lt;- cbind(subject, x)
+all &lt;- cbind(y, all)
+
+</code></pre>
+
 <h2>Step 2 - Extract mean and Standard deviation</h2>
 
 <p>Based on the standardised columns names those with _Mean or _StDv were extracted</p>
+
+<pre><code>########################################################################################################
+# Remove any value columns that are not either a mean or a standard deviation
+########################################################################################################
+
+colnames &lt;- names(all)
+collabel &lt;- colnames[1:2] # save ActivityLabel, Subject
+colmeans &lt;- grep(&quot;_Mean&quot;, colnames, value = TRUE) # all Mean columns
+colstdev &lt;- grep(&quot;_StDv&quot;, colnames, value = TRUE) # all Standard Deviation columns
+keepcolnames &lt;- c(collabel, colmeans, colstdev) # create list of columns to keep
+all &lt;- all[ , keepcolnames] # subset based on columns to keep
+
+</code></pre>
 
 <h2>Step 3 - Activity Descriptions added</h2>
 
 <p>Using &ldquo;merge&rdquo; the ActivityDescriptions were added</p>
 
+<pre><code>all &lt;- merge(activitylabels, all)   # Add a column for Activity Description
+</code></pre>
+
 <h2>Step 4 - Appropriate labelling</h2>
 
 <p>This was done in both the initialisation process as described above and with the addition &ldquo;_average&rdquo; in the resulting &ldquo;TidyData&rdquo; summary file.</p>
 
+<pre><code>names(allsummary) &lt;- paste(names(allsummary), &quot;_average&quot;, sep=&quot;&quot;) # add &quot;average&quot; to column names
+</code></pre>
+
 <h2>Step 5 - Tidy Data file</h2>
 
 <p>Produced with the aggregate function and verified as in the correct order (ie Activity then Subject)</p>
+
+<pre><code>
+########################################################################################################
+# Get the means by Activity, Subject; update the column names and add a the activity description
+########################################################################################################
+
+allsummary &lt;- aggregate(all[c(colmeans, colstdev)], by = list(all$Subject, all$ActivityLabel), mean)
+names(allsummary) &lt;- paste(names(allsummary), &quot;_average&quot;, sep=&quot;&quot;) # add &quot;average&quot; to column names
+colnames(allsummary)[1:2] &lt;- c(&quot;Subject&quot;, &quot;ActivityLabel&quot;) # restore the col names for the grouped columns
+allsummary &lt;- merge(activitylabels, allsummary)   # Add a column for Activity Description
+
+# note that the aggregation was done in Subject, Activity order to create the appropriate row order
+# the columns were then ordered correctly by the merge - there is probably a more elegant way to do it
+
+########################################################################################################
+# Write the tidy data file
+########################################################################################################
+
+setwd(projectdir)
+write.table(allsummary, &quot;tidydata.txt&quot;, row.names = FALSE )
+</code></pre>
 
 <h1>README from the original dataset</h1>
 
